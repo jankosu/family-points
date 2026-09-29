@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rodzinne Punkty</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>⭐ Rodzinne Punkty</h1>
+  <div>Najpierw Baza dnia, potem zadania dodatkowe i nagrody.</div>
+</header>
+
+<div class="bar">
+  <label>Data: <input id="day" type="date"></label>
+  <button onclick="load()">Pokaż dzień</button>
+</div>
+
+<main>
+  <div id="msg" class="msg"></div>
+  <section id="children" class="children"></section>
+
+  <h2>🎁 Wishlisty</h2>
+  <section id="rewards" class="rewardlist"></section>
+
+  <div class="admin">
+    <button onclick="document.querySelector('.adminbox').style.display='block'">Panel rodzica</button>
+    <div class="adminbox">
+      <b>Dodaj nagrodę</b><br>
+      <input id="rtitle" placeholder="Nazwa">
+      <input id="rcost" type="number" placeholder="Punkty"><br>
+      <input id="pin" type="password" placeholder="PIN rodzica"><br>
+      <button onclick="addReward()">Dodaj</button>
+      <hr>
+      <b>Historia punktów</b><br>
+      <select id="hchild">
+        <option value="kuba">Jędrzej</option>
+        <option value="zosia">Władzia</option>
+      </select>
+      <button onclick="showHistory()">Pokaż historię</button>
+      <div id="history"></div>
+    </div>
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
