@@ -1,9 +1,25 @@
+ :root {
+  color-scheme: light;
+  --bg: #f5f7ff; --text: #202a43; --surface: #fff; --border: #ccd2e4;
+  --accent: #6546d4; --track: #e7eafb; --heading: #4a3d99;
+  --divider: #eef0f7; --muted: #666677; --reward: #fff4da;
+  --reward-text: #986310; --reward-border: #d6bc7d;
+  --button: #6044d1; --error: #b03044;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111522; --text: #e7eaf5; --surface: #1d2436; --border: #46516b;
+  --accent: #b9a5ff; --track: #343d56; --heading: #c4b7ff;
+  --divider: #354058; --muted: #aeb7cd; --reward: #352e20;
+  --reward-text: #f4ce83; --reward-border: #79643d;
+  --button: #7254dd; --error: #ff9eae;
+}
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: #f5f7ff;
-  color: #202a43;
+  background: var(--bg);
+  color: var(--text);
   font: 16px system-ui;
 }
 
@@ -30,18 +46,18 @@ h1 { margin: 0; }
 .bar input, .adminbox input {
   font: inherit;
   padding: 8px;
-  border: 1px solid #ccd2e4;
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
 .children {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
 .card, .adminbox {
-  background: #fff;
+  background: var(--surface);
   border-radius: 15px;
   padding: 18px;
   box-shadow: 0 3px 15px #27376514;
@@ -54,11 +70,11 @@ h1 { margin: 0; }
   justify-content: space-between;
 }
 
-.score, .pts { color: #6546d4; }
+.score, .pts { color: var(--accent); }
 
 .progress {
   height: 10px;
-  background: #e7eafb;
+  background: var(--track);
   border-radius: 8px;
   margin: 12px 0;
 }
@@ -73,7 +89,7 @@ h1 { margin: 0; }
 .period-title {
   margin: 14px 0 4px;
   font-weight: 700;
-  color: #4a3d99;
+  color: var(--heading);
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: .03em;
@@ -84,7 +100,7 @@ h1 { margin: 0; }
   gap: 10px;
   align-items: center;
   padding: 8px 2px;
-  border-bottom: 1px solid #eef0f7;
+  border-bottom: 1px solid var(--divider);
 }
 
 .task input {
@@ -93,7 +109,7 @@ h1 { margin: 0; }
   accent-color: #48b883;
 }
 
-.done { text-decoration: line-through; color: #667; }
+.done { text-decoration: line-through; color: var(--muted); }
 .pts { margin-left: auto; font-weight: bold; }
 .extra-title { margin: 16px 0 4px; font-weight: bold; }
 .locked { opacity: .45; }
@@ -105,20 +121,20 @@ h1 { margin: 0; }
 }
 
 .reward {
-  background: #fff4da;
+  background: var(--reward);
   border-radius: 12px;
   padding: 14px;
   font-weight: 650;
 }
 
-.reward span { color: #986310; }
+.reward span { color: var(--reward-text); }
 
 button {
   font: inherit;
   border: 0;
   border-radius: 8px;
   padding: 8px 10px;
-  background: #6044d1;
+  background: var(--button);
   color: #fff;
   cursor: pointer;
   margin-top: 8px;
@@ -135,7 +151,7 @@ button {
 .msg {
   min-height: 24px;
   text-align: center;
-  color: #b03044;
+  color: var(--error);
   font-weight: bold;
 }
 
@@ -148,6 +164,13 @@ td:last-child, th:last-child { text-align: right; }
 }
 
 .redeem-form { display: grid; gap: 7px; margin-top: 10px; font-weight: 400; }
-.redeem-form hr { width: 100%; border: 0; border-top: 1px solid #e3c98d; margin: 3px 0; }
+.redeem-form hr { width: 100%; border: 0; border-top: 1px solid var(--reward-border); margin: 3px 0; }
 .redeem-form label { display: grid; gap: 3px; font-size: 14px; }
-.redeem-form input, .redeem-form select { font: inherit; padding: 7px; border: 1px solid #d6bc7d; border-radius: 7px; }
+.redeem-form input, .redeem-form select { font: inherit; padding: 7px; border: 1px solid var(--reward-border); border-radius: 7px; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.theme-toggle { margin: 0; border: 1px solid #ffffff80; background: #ffffff1a; color: #fff; }
+.bar { flex-wrap: wrap; }
+input:not([type="checkbox"]), select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font: inherit; }
+button:hover { filter: brightness(1.12); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }

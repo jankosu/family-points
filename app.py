@@ -5,11 +5,87 @@ import math
 from datetime import date
 from pathlib import Path
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from datetime import timedelta
+from werkzeug.security import check_password_hash
+import secrets
+import time
 
 from tasks import base_for, EXTRA, KIDS, all_task_defs
 
 app = Flask(__name__)
+app.config.update(
+    SECRET_KEY=os.environ.get('SECRET_KEY'),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+)
+
+
+@app.before_request
+def require_login():
+    if request.endpoint == 'static' or request.path == '/login':
+        return None
+    if not session.get('user'):
+        if request.path.startswith('/api/'):
+            return jsonify(error='Zaloguj się do aplikacji'), 401
+        return redirect(url_for('login'))
+    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        token = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token', '')
+        if not token or not secrets.compare_digest(token, session.get('csrf', '')):
+            return jsonify(error='Nieprawidłowy token formularza. Odśwież stronę.'), 400
+
+
+@app.after_request
+def private_response(response):
+    if request.endpoint != 'static':
+        response.headers['Cache-Control'] = 'no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    return response
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if session.get('user'):
+        return redirect(url_for('index'))
+    session.setdefault('csrf', secrets.token_urlsafe(32))
+    error, status = None, 200
+    if request.method == 'POST':
+        token = request.form.get('csrf_token', '')
+        if not token or not secrets.compare_digest(token, session['csrf']):
+            error, status = 'Odśwież stronę i spróbuj ponownie.', 400
+        else:
+            now = time.time()
+            address = request.remote_addr or 'unknown'
+            with store.con() as c:
+                c.execute('BEGIN IMMEDIATE')
+                c.execute('DELETE FROM login_attempts WHERE attempted < ?', (now - 300,))
+                count = c.execute('SELECT count(*) FROM login_attempts WHERE address=?', (address,)).fetchone()[0]
+                if count < 10:
+                    c.execute('INSERT INTO login_attempts VALUES (?, ?)', (address, now))
+            if count >= 10:
+                error, status = 'Za dużo prób. Spróbuj ponownie za 5 minut.', 429
+            else:
+                password_hash = os.environ.get('LOGIN_PASSWORD_HASH', '')
+                password_ok = bool(password_hash) and check_password_hash(password_hash, request.form.get('password', ''))
+                username_ok = request.form.get('username', '') == os.environ.get('LOGIN_USER', 'rodzic')
+                if password_ok and username_ok:
+                    with store.con() as c:
+                        c.execute('DELETE FROM login_attempts WHERE address=?', (address,))
+                    session.clear()
+                    session['user'] = os.environ.get('LOGIN_USER', 'rodzic')
+                    session['csrf'] = secrets.token_urlsafe(32)
+                    session.permanent = True
+                    return redirect(url_for('index'))
+                error, status = 'Nieprawidłowy login lub hasło.', 401
+    return render_template('login.html', error=error), status
+
+
+@app.post('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 DB_PATH = os.getenv('POINTS_DB', '/var/lib/rodzinne-punkty/points.db')
 PARENT_PIN = os.getenv('PARENT_PIN', '1234')
@@ -39,6 +115,8 @@ class FamilyPoints:
 
     def _init_db(self):
         with self.con() as c:
+            c.execute('CREATE TABLE IF NOT EXISTS login_attempts(address TEXT, attempted REAL)')
+            c.execute('CREATE INDEX IF NOT EXISTS login_attempts_address ON login_attempts(address)')
             c.execute('CREATE TABLE IF NOT EXISTS checks('
                       'day TEXT, child TEXT, task TEXT, checked INTEGER, '
                       'PRIMARY KEY(day, child, task))')
@@ -62,7 +140,7 @@ class FamilyPoints:
                 ])
 
     def tasks(self, d, k):
-        if k not in ('kuba', 'zosia'):
+        if k not in {child['id'] for child in KIDS}:
             raise ValueError('Nieznane dziecko')
         base = base_for(date.fromisoformat(d))
         with self.con() as c:
@@ -98,8 +176,6 @@ class FamilyPoints:
         valid = {x['id'] for x in ts}
         if t not in valid:
             raise ValueError('Nieznane zadanie')
-        if t in {x['id'] for x in ts if x['kind'] == 'extra'} and on and not self.summary(d, k)['base_complete']:
-            raise ValueError('Najpierw ukończ Bazę dnia.')
         with self.con() as c:
             c.execute(
                 'INSERT INTO checks VALUES(?, ?, ?, ?) '
@@ -135,7 +211,7 @@ class FamilyPoints:
         return cost
 
     def history(self, k, limit=200):
-        if k not in ('kuba', 'zosia'):
+        if k not in {child['id'] for child in KIDS}:
             raise ValueError('Nieznane dziecko')
         titles = {tid: t[0] for tid, t in all_task_defs().items()}
         events = []
@@ -154,7 +230,7 @@ store = FamilyPoints(DB_PATH)
 
 @app.get('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', kids=KIDS)
 
 
 @app.get('/api/state')
@@ -203,8 +279,6 @@ def api_reward():
 def api_redeem():
     b = request.get_json(force=True) or {}
     try:
-        if b.get('pin') != PARENT_PIN:
-            raise ValueError('Nieprawidłowy PIN rodzica')
         cost = store.redeem(b['child'], b['id'], b.get('minutes'))
         return jsonify({'ok': True, 'cost': cost})
     except (KeyError, ValueError) as e:

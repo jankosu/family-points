@@ -4,17 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rodzinne Punkty</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta name="csrf-token" content="{{ session.csrf }}">
+<script src="{{ url_for('static', filename='theme.js', v='2') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='2') }}">
 </head>
 <body>
 <header>
   <h1>⭐ Rodzinne Punkty</h1>
-  <div>Najpierw Baza dnia, potem zadania dodatkowe i nagrody.</div>
+  <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false">🌙 Ciemny motyw</button>
 </header>
 
 <div class="bar">
   <label>Data: <input id="day" type="date"></label>
   <button onclick="load()">Pokaż dzień</button>
+  <form method="post" action="{{ url_for('logout') }}" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ session.csrf }}">
+    <button type="submit">Wyloguj ({{ session.user }})</button>
+  </form>
 </div>
 
 <main>
@@ -35,8 +41,9 @@
       <hr>
       <b>Historia punktów</b><br>
       <select id="hchild">
-        <option value="kuba">Jędrzej</option>
-        <option value="zosia">Władzia</option>
+        {% for child in kids %}
+        <option value="{{ child.id }}">{{ child.name }}</option>
+        {% endfor %}
       </select>
       <button onclick="showHistory()">Pokaż historię</button>
       <div id="history"></div>
